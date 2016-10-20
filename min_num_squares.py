@@ -1,3 +1,7 @@
+# Problem statement: Given an integer n, determine the smallest number of perfect squares that sum to n
+# Input: n - an integer
+# Output: min_num_squares - an integer number that represents the smallest number of perfect squares that sum to n
+
 def min_num_squares(x):
     queue = [(x, 0)]
     visited = set()
