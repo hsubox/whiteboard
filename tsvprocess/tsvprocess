@@ -1,0 +1,124 @@
+#!/usr/local/bin/node
+'use strict'
+
+var fs = require('fs');
+var readline = require('readline');
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+var file = process.argv[2];
+
+fs.readFile(file, function (err, data) {
+  if (err) { throw err; }
+
+  var content = data.toString();
+  if (content === '') {
+    console.log('No data.');
+    return;
+  }
+  var data = processFile(content);
+
+  var prompt = `Options (delimit with #):
+              - show
+              - max#<col_name>
+              - min#<col_name>
+              - find#<expression>#<col_name>
+              - quit
+              Enter your choice: `;
+
+  processUserInput(prompt, data);
+});
+
+function processUserInput(prompt, data) {
+  rl.question(prompt, function (input) {
+    var command = input.replace(/(\r\n|\n|\r)/gm,"").split('#');
+    switch (command[0]) {
+        case "quit":
+          rl.close();
+          return;
+        case "show":
+          show(data);
+          break;
+        case "max":
+          if (command.length == 2 && isValidCol(command[1], data)) {
+            console.log("The max in '" + command[1] + "' is " + findMax(command[1], data) + ".");
+            break;
+          }
+        case "min":
+          if (command.length == 2 && isValidCol(command[1], data)) {
+            console.log("The min in '" + command[1] + "' is " + findMin(command[1], data) + ".");
+            break;
+          }
+        case "find":
+          if (command.length == 3 && isValidCol(command[2], data)) {
+            console.log("Search results in " + command[2] + ":\n" + search(command[1], command[2], data));
+            break;
+          }
+        default:
+          console.log("That is not a valid input. Try again.");
+          break;
+    }
+    processUserInput(prompt, data);
+  });
+}
+
+function show(data) {
+  var delimiter = '\t';
+  var headers = Object.getOwnPropertyNames(data[0]);
+  console.log(headers.join(delimiter));
+  console.log(headers.map(header => {
+    return Array(header.length).join("-");
+  }).join(delimiter));
+  console.log(data.map(entry => headers.map(key => entry[key]).join(delimiter)).join('\n'));
+}
+
+function isValidCol(colName, data) {
+  return data[0].hasOwnProperty(colName);
+}
+
+function sortCol(colName, data) {
+  return data.map((entry) => {
+    return entry[colName];
+  }).sort((a, b) => {
+    return a < b;
+  });
+}
+
+function findMax(colName, data) {
+  var sorted = sortCol(colName, data);
+  return sorted[0];
+}
+
+function findMin(colName, data) {
+  var sorted = sortCol(colName, data);
+  return sorted[sorted.length - 1];
+}
+
+function search(expression, colName, data) {
+  var re = new RegExp(expression, "gi");
+  return data.map((entry) => {
+    return entry[colName];
+  }).filter((entry) => {
+    return re.test(entry);
+  }).join('\n');
+}
+
+function processFile(content) {
+  var contentArray = content.split('\n').slice(0, -1).map((row) => {
+    return row.split('\t').map((entry) => {
+      return (isNaN(Number(entry))) ? entry : Number(entry);
+    });
+  });
+  var headers = contentArray[0];
+  var data = contentArray.slice(1);
+  return data.map(function(d) {
+    var obj = {};
+    for (var i = 0; i < headers.length; i++) {
+      obj[headers[i]] = d[i];
+    }
+    return obj;
+  });
+}
